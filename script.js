@@ -27,6 +27,11 @@ function showPage(target){
   });
 
   document.getElementById("page-" + target).classList.add("active");
+
+  if(target === "practice"){
+    renderPracticeList();
+  }
+
 }
 
 navItems.forEach(item => {
@@ -42,14 +47,14 @@ navItems.forEach(item => {
 });
 
 
-/* PRACTICE BUTTON */
+/* HOME "Practice on Platform" BUTTON */
 
 document.getElementById("practiceBtn").addEventListener("click", () => {
   showPage("practice");
 });
 
 
-/* VALUES */
+/* VALUES (SAT calculator) */
 
 const values = {
   rwM1:14,
@@ -271,6 +276,287 @@ function updateScores(){
 }
 
 
-/* INITIAL */
+/* INITIAL (home page) */
 
 updateScores();
+
+
+/* ============================================= */
+/* PRACTICE SECTION                               */
+/* ============================================= */
+
+/*
+  Yangi test qo'shmoqchi bo'lsangiz, shunchaki quyidagi
+  massivga yangi obyekt qo'shing. Boshqa kodni
+  o'zgartirish shart emas.
+
+  id            -> unique kalit (localStorage uchun)
+  title         -> "Paper #1" kabi nom
+  difficulty    -> "Easy" / "Medium" / "Hard"
+  basePeople    -> boshlang'ich "people took" soni
+  questions     -> savollar massivi (hozircha 1 tadan qo'yilgan)
+*/
+
+const practiceTests = [
+  {
+    id:"paper-1",
+    title:"Paper #1",
+    difficulty:"Medium",
+    basePeople:128,
+    questions:[
+      {
+        question:"Siz developermisiz?",
+        options:["Ha","Yo‘q"],
+        correctIndex:1
+      }
+    ]
+  }
+];
+
+
+/* STATE (joriy ochiq test) */
+
+let currentTest = null;
+let currentAnswered = false;
+
+
+/* LOCAL STORAGE HELPERS */
+
+function getTestStats(test){
+
+  const raw = localStorage.getItem("satlab_" + test.id);
+
+  if(raw){
+    return JSON.parse(raw);
+  }
+
+  return {
+    peopleTook:test.basePeople,
+    lastScore:null
+  };
+
+}
+
+function saveTestStats(test, stats){
+
+  localStorage.setItem("satlab_" + test.id, JSON.stringify(stats));
+
+}
+
+
+/* ICONS */
+
+const iconPaper = `
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+  <path d="M14 3v4h4"/>
+</svg>`;
+
+const iconBook = `
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v16H6.5A2.5 2.5 0 0 0 4 21z"/>
+  <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v16h5.5a2.5 2.5 0 0 1 2.5 2.5z"/>
+</svg>`;
+
+const iconPlay = `
+<svg viewBox="0 0 24 24" fill="currentColor">
+  <path d="M8 5v14l11-7z"/>
+</svg>`;
+
+const iconChat = `
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M21 11.5a8.38 8.38 0 0 1-1.9 5.4L21 21l-4.1-1.1a8.5 8.5 0 1 1 4.1-8.4z"/>
+</svg>`;
+
+const iconBack = `
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M19 12H5"/>
+  <path d="M11 18l-6-6 6-6"/>
+</svg>`;
+
+
+/* RENDER PRACTICE LIST */
+
+function renderPracticeList(){
+
+  const list = document.getElementById("practiceList");
+  const quizView = document.getElementById("quizView");
+
+  quizView.classList.remove("active");
+  list.style.display = "grid";
+
+  list.innerHTML = "";
+
+  practiceTests.forEach(test => {
+
+    const stats = getTestStats(test);
+
+    const card = document.createElement("div");
+    card.className = "paper-card";
+
+    card.innerHTML = `
+      <div class="paper-card-top">
+        <div class="paper-icon">${iconPaper}</div>
+        <div class="paper-title">${test.title}</div>
+      </div>
+
+      <div class="paper-badges">
+        <span class="badge badge-difficulty">
+          <span class="dot"></span> Version ${test.difficulty}
+        </span>
+        <span class="badge badge-type">
+          ${iconBook} Practice Test
+        </span>
+      </div>
+
+      <div class="paper-stats">
+        <div class="paper-stat">
+          <div class="paper-stat-label">People took</div>
+          <div class="paper-stat-value">${stats.peopleTook}</div>
+        </div>
+        <div class="paper-stat">
+          <div class="paper-stat-label">Your last score</div>
+          <div class="paper-stat-value">${stats.lastScore ? stats.lastScore : "Not taken"}</div>
+        </div>
+      </div>
+
+      <div class="paper-actions">
+        <button class="start-btn" data-test="${test.id}">
+          ${iconPlay} Start Test
+        </button>
+        <button class="discuss-btn">
+          ${iconChat} Discuss
+        </button>
+      </div>
+    `;
+
+    list.appendChild(card);
+
+  });
+
+
+  /* START TEST BUTTONS */
+
+  document.querySelectorAll(".start-btn").forEach(btn => {
+
+    btn.addEventListener("click", () => {
+
+      const testId = btn.getAttribute("data-test");
+      const test = practiceTests.find(t => t.id === testId);
+
+      startQuiz(test);
+
+    });
+
+  });
+
+
+  /* DISCUSS BUTTONS (hozircha faqat vizual) */
+
+  document.querySelectorAll(".discuss-btn").forEach(btn => {
+
+    btn.addEventListener("click", () => {
+      alert("Discuss bo‘limi tez orada qo‘shiladi.");
+    });
+
+  });
+
+}
+
+
+/* START QUIZ */
+
+function startQuiz(test){
+
+  currentTest = test;
+  currentAnswered = false;
+
+  const list = document.getElementById("practiceList");
+  const quizView = document.getElementById("quizView");
+
+  list.style.display = "none";
+  quizView.classList.add("active");
+
+  const question = test.questions[0];
+
+  quizView.innerHTML = `
+    <div class="quiz-card">
+
+      <div class="quiz-progress">${test.title} · 1 / ${test.questions.length} savol</div>
+
+      <div class="quiz-question">${question.question}</div>
+
+      <div class="quiz-options" id="quizOptions">
+        ${question.options.map((opt, i) => `
+          <button class="quiz-option" data-index="${i}">${opt}</button>
+        `).join("")}
+      </div>
+
+      <div class="quiz-result" id="quizResult"></div>
+
+      <button class="quiz-back-btn" id="quizBackBtn" style="display:none;">
+        ${iconBack} Ortga qaytish
+      </button>
+
+    </div>
+  `;
+
+  const optionButtons = quizView.querySelectorAll(".quiz-option");
+
+  optionButtons.forEach(btn => {
+
+    btn.addEventListener("click", () => {
+
+      if(currentAnswered) return;
+
+      currentAnswered = true;
+
+      const chosenIndex = Number(btn.getAttribute("data-index"));
+      const isCorrect = chosenIndex === question.correctIndex;
+
+      optionButtons.forEach(b => {
+
+        b.disabled = true;
+
+        const bIndex = Number(b.getAttribute("data-index"));
+
+        if(bIndex === question.correctIndex){
+          b.classList.add("correct");
+        }
+        else if(bIndex === chosenIndex && !isCorrect){
+          b.classList.add("wrong");
+        }
+
+      });
+
+      const resultBox = document.getElementById("quizResult");
+      resultBox.classList.add("show");
+
+      const scoreText = isCorrect ? "1 / 1" : "0 / 1";
+
+      if(isCorrect){
+        resultBox.classList.add("pass");
+        resultBox.textContent = "To‘g‘ri! Natija: " + scoreText;
+      }else{
+        resultBox.classList.add("fail");
+        resultBox.textContent = "Xato. To‘g‘ri javob: " + question.options[question.correctIndex] + " — Natija: " + scoreText;
+      }
+
+      /* STATS SAVE */
+
+      const stats = getTestStats(test);
+      stats.peopleTook = stats.peopleTook + 1;
+      stats.lastScore = scoreText;
+      saveTestStats(test, stats);
+
+      document.getElementById("quizBackBtn").style.display = "flex";
+
+    });
+
+  });
+
+  document.getElementById("quizBackBtn").addEventListener("click", () => {
+    renderPracticeList();
+  });
+
+}
